@@ -184,7 +184,7 @@ WHERE email = 'bernad@example.com' AND password = 'dwiki123';
 -- change password
 UPDATE users
 SET password = 'dwiki123', updated_at = NOW()
-WHERE email = 'bernad@example.com' AND password = 'dwiki123';
+WHERE email = 'bernad@example.com' AND password = 'bernad123';
 
 -- change user profile
 UPDATE users
