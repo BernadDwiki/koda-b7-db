@@ -190,8 +190,3 @@ WHERE email = 'bernad@example.com' AND password = 'dwiki123';
 UPDATE users
 SET name = 'Bernadus Dwiki', picture = 'newpicture.jpg', phone_number = '081234567899', updated_at = NOW()
 WHERE email = 'bernad@example.com' AND password = 'dwiki123';
-
-DROP TABLE users;
-DROP TABLE ewallets;
-DROP TABLE payment_methods;
-DROP TABLE transactions;
