@@ -28,7 +28,7 @@ CREATE TABLE payment_methods (
     updated_at TIMESTAMP
 );
 
-table payment_methods;
+-- table payment_methods;
 
 INSERT INTO payment_methods (method_name)
 VALUES ('BRI'), ('Dana'), ('BCA'), ('Gopay'), ('Ovo');
@@ -38,18 +38,32 @@ CREATE TYPE transaction_status AS ENUM ('pending', 'success', 'failed');
 
 CREATE TABLE transactions (
     id int PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    sender_id int,
-    receiver_id int NOT NULL,
     amount bigint NOT NULL,
-    payment_method_id int,
     transaction_type transaction_type NOT NULL,
     note VARCHAR(255),
     status transaction_status NOT NULL,
-    discount bigint DEFAULT 0,
-    tax bigint DEFAULT 0,
     created_at TIMESTAMP DEFAULT NOW() NOT NULL,
-    updated_at TIMESTAMP,
+    updated_at TIMESTAMP
+);
+
+CREATE TABLE transfer_details (
+    id int PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    transaction_id int NOT NULL UNIQUE,
+    sender_id int NOT NULL,
+    receiver_id int NOT NULL,
+    FOREIGN KEY (transaction_id) REFERENCES transactions(id),
     FOREIGN KEY (sender_id) REFERENCES users(id),
+    FOREIGN KEY (receiver_id) REFERENCES users(id)
+);
+
+CREATE TABLE top_up_details (
+    id int PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    transaction_id int NOT NULL UNIQUE,
+    receiver_id int NOT NULL,
+    payment_method_id int NOT NULL,
+    discount bigint,
+    tax bigint,
+    FOREIGN KEY (transaction_id) REFERENCES transactions(id),
     FOREIGN KEY (receiver_id) REFERENCES users(id),
     FOREIGN KEY (payment_method_id) REFERENCES payment_methods(id)
 );
@@ -69,50 +83,54 @@ VALUES ('bernad@example.com', 'dwiki123'),
        ('yuki@example.com', 'yukipassword');
 
 INSERT INTO ewallets (user_id, balance, income, expense)
-VALUES ((SELECT id FROM users WHERE email = 'bernad@example.com' AND password = 'dwiki123'), 0, 0, 0),
-       ((SELECT id FROM users WHERE email = 'yuki@example.com' AND password = 'yukipassword'), 0, 0, 0);
+VALUES ((SELECT id FROM users WHERE email = 'bernad@example.com'), 0, 0, 0),
+       ((SELECT id FROM users WHERE email = 'yuki@example.com'), 0, 0, 0);
 
 -- get user login information
 SELECT id, name, email, picture, phone_number
 FROM users
-WHERE email = 'bernad@example.com' AND password = 'dwiki123';
+WHERE id = 1;
 
 -- get/check user pin
 SELECT pin
 FROM users
-WHERE email = 'bernad@example.com' AND password = 'dwiki123';
+WHERE id = 1;
 
 -- get transaction history for a user
 SELECT t.id, u1.name AS sender_name, u2.name AS receiver_name, t.amount, t.transaction_type, t.created_at, t.note, t.status
 FROM transactions t
-LEFT JOIN users u1 ON t.sender_id = u1.id
-JOIN users u2 ON t.receiver_id = u2.id
-WHERE t.sender_id = (SELECT id FROM users WHERE email = 'bernad@example.com' AND password = 'dwiki123')
-OR t.receiver_id = (SELECT id FROM users WHERE email = 'bernad@example.com' AND password = 'dwiki123')
+JOIN transfer_details td ON t.id = td.transaction_id
+LEFT JOIN users u1 ON td.sender_id = u1.id
+JOIN users u2 ON td.receiver_id = u2.id
+WHERE td.sender_id = (SELECT id FROM users WHERE email = 'bernad@example.com' AND password = 'dwiki123')
+OR td.receiver_id = (SELECT id FROM users WHERE email = 'bernad@example.com' AND password = 'dwiki123')
 ORDER BY t.created_at DESC;
 
 -- get user history with option (income/expense, date range)
 -- income
 SELECT t.id, u1.name AS sender_name, u2.name AS receiver_name, t.amount, t.transaction_type, t.created_at, t.note, t.status
 FROM transactions t
-LEFT JOIN users u1 ON t.sender_id = u1.id
-JOIN users u2 ON t.receiver_id = u2.id
-WHERE t.receiver_id = (SELECT id FROM users WHERE email = 'yuki@example.com' AND password = 'yukipassword')
+JOIN transfer_details td ON t.id = td.transaction_id
+LEFT JOIN users u1 ON td.sender_id = u1.id
+JOIN users u2 ON td.receiver_id = u2.id
+WHERE td.receiver_id = (SELECT id FROM users WHERE email = 'yuki@example.com' AND password = 'yukipassword')
 ORDER BY t.created_at DESC;
 
 -- expense
 SELECT t.id, u1.name AS sender_name, u2.name AS receiver_name, t.amount, t.transaction_type, t.created_at, t.note, t.status
 FROM transactions t
-LEFT JOIN users u1 ON t.sender_id = u1.id
-JOIN users u2 ON t.receiver_id = u2.id
-WHERE t.sender_id = (SELECT id FROM users WHERE email = 'bernad@example.com' AND password = 'dwiki123')
+JOIN transfer_details td ON t.id = td.transaction_id
+LEFT JOIN users u1 ON td.sender_id = u1.id
+JOIN users u2 ON td.receiver_id = u2.id
+WHERE td.sender_id = (SELECT id FROM users WHERE email = 'bernad@example.com' AND password = 'dwiki123')
 ORDER BY t.created_at DESC;
 
 -- date range
 SELECT t.id, u1.name AS sender_name, u2.name AS receiver_name, t.amount, t.transaction_type, t.created_at, t.note, t.status
 FROM transactions t
-LEFT JOIN users u1 ON t.sender_id = u1.id
-JOIN users u2 ON t.receiver_id = u2.id
+JOIN transfer_details td ON t.id = td.transaction_id
+LEFT JOIN users u1 ON td.sender_id = u1.id
+JOIN users u2 ON td.receiver_id = u2.id
 WHERE t.created_at BETWEEN '2026-01-01 00:00:00' AND '2026-12-31 23:59:59'
 AND (t.sender_id = (SELECT id FROM users WHERE email = 'bernad@example.com' AND password = 'dwiki123')
 OR t.receiver_id = (SELECT id FROM users WHERE email = 'bernad@example.com' AND password = 'dwiki123'))
@@ -144,13 +162,20 @@ AND balance >= 10000;
 
 BEGIN;
 
-INSERT INTO transactions (sender_id, receiver_id, amount, payment_method_id, transaction_type, note, status)
-VALUES (1, 2, 
-10000, NULL, 'transfer', 'Transfer to receiver', 'success');
+WITH new_transaction AS (
+    INSERT INTO transactions (amount, transaction_type, note, status)
+    VALUES (10000, 'transfer', 'Transfer to Yuki', 'success')
+    RETURNING id
+)
+
+INSERT INTO transfer_details (transaction_id, sender_id, receiver_id)
+SELECT id, 1, 2
+FROM new_transaction;
 
 UPDATE ewallets
 SET balance = balance - 10000, expense = expense + 10000, updated_at = NOW()
-WHERE user_id = 1;
+WHERE user_id = 1
+AND balance >= 10000;
 
 UPDATE ewallets
 SET balance = balance + 10000, income = income + 10000, updated_at = NOW()
@@ -161,9 +186,15 @@ COMMIT;
 --- top up
 BEGIN;
 
-INSERT INTO transactions (sender_id, receiver_id, amount, payment_method_id, transaction_type, note, status)
-VALUES (NULL, 1,
-50000, 1, 'top_up', 'Top up wallet', 'success');
+WITH new_transaction AS (
+    INSERT INTO transactions (amount, transaction_type, note, status)
+    VALUES (50000, 'top_up', 'Top up via BRI', 'success')
+    RETURNING id
+)
+
+INSERT INTO top_up_details (transaction_id, receiver_id, payment_method_id, discount, tax)
+SELECT id, 1, (SELECT id FROM payment_methods WHERE method_name = 'BRI'), 0, 0
+FROM new_transaction;
 
 UPDATE ewallets
 SET balance = balance + 50000, income = income + 50000, updated_at = NOW()
@@ -174,19 +205,19 @@ COMMIT;
 -- get user profile (photo, name, email, phone number)
 SELECT name, email, picture, phone_number
 FROM users
-WHERE email = 'bernad@example.com' AND password = 'dwiki123';
+WHERE id = 1;
 
 -- change pin
 UPDATE users
 SET pin = '654321', updated_at = NOW()
-WHERE email = 'bernad@example.com' AND password = 'dwiki123';
+WHERE id = 1;
 
 -- change password
 UPDATE users
-SET password = 'dwiki123', updated_at = NOW()
-WHERE email = 'bernad@example.com' AND password = 'bernad123';
+SET password = 'bernad123', updated_at = NOW()
+WHERE id = 1;
 
 -- change user profile
 UPDATE users
 SET name = 'Bernadus Dwiki', picture = 'newpicture.jpg', phone_number = '081234567899', updated_at = NOW()
-WHERE email = 'bernad@example.com' AND password = 'dwiki123';
+WHERE id = 1;
