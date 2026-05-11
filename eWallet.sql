@@ -1,9 +1,9 @@
 CREATE TABLE users (
     id int PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    name VARCHAR(255) NOT NULL,
+    name VARCHAR(255),
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
-    pin CHAR(6) NOT NULL,
+    pin CHAR(6) NOT,
     picture VARCHAR(255),
     phone_number VARCHAR(20) UNIQUE,
     created_at TIMESTAMP DEFAULT NOW() NOT NULL,
@@ -60,9 +60,9 @@ FROM users
 WHERE email = 'bernad@example.com' AND password = 'dwiki123';
 
 -- Register
-INSERT INTO users (name, email, password, pin, picture, phone_number)
-VALUES ('Bernad Dwiki', 'bernad@example.com', 'dwiki123', '567809', NULL, '081234567890'),
-       ('Yuki Kato', 'yuki@example.com', 'yukipassword', '123456', NULL, '081234567891');
+INSERT INTO users (email, password, pin, picture)
+VALUES ('bernad@example.com', 'dwiki123', '567809', NULL),
+       ('yuki@example.com', 'yukipassword', '123456', NULL);
 
 INSERT INTO ewallets (user_id, balance, income, expense)
 VALUES ((SELECT id FROM users WHERE email = 'bernad@example.com' AND password = 'dwiki123'), 0, 0, 0),
@@ -126,8 +126,8 @@ WHERE user_id = (SELECT id FROM users WHERE email = 'bernad@example.com' AND pas
 -- find receiver with pagination
 SELECT id, name, email, picture, phone_number
 FROM users
-WHERE id != (SELECT id FROM users WHERE email = 'bernad@example.com')
-AND name ILIKE '%a%'
+WHERE id == (SELECT id FROM users WHERE email = 'yuki@example.com')
+-- WHERE name ILIKE '%a%'
 ORDER BY name
 LIMIT 10 OFFSET 0;
 
@@ -145,11 +145,11 @@ VALUES (1, 2,
 10000, NULL, 'transfer', 'Transfer to receiver', 'success');
 
 UPDATE ewallets
-SET balance = balance - 10000, expense = expense + 10000
+SET balance = balance - 10000, expense = expense + 10000, updated_at = NOW()
 WHERE user_id = 1;
 
 UPDATE ewallets
-SET balance = balance + 10000, income = income + 10000
+SET balance = balance + 10000, income = income + 10000, updated_at = NOW()
 WHERE user_id = 2;
 
 COMMIT;
@@ -162,7 +162,7 @@ VALUES (NULL, 1,
 50000, 1, 'top_up', 'Top up wallet', 'success');
 
 UPDATE ewallets
-SET balance = balance + 50000, income = income + 50000
+SET balance = balance + 50000, income = income + 50000, updated_at = NOW()
 WHERE user_id = 1;
 
 COMMIT;
@@ -174,15 +174,20 @@ WHERE email = 'bernad@example.com' AND password = 'dwiki123';
 
 -- change pin
 UPDATE users
-SET pin = '654321'
+SET pin = '654321', updated_at = NOW()
 WHERE email = 'bernad@example.com' AND password = 'dwiki123';
 
 -- change password
 UPDATE users
-SET password = 'dwiki123'
+SET password = 'dwiki123', updated_at = NOW()
 WHERE email = 'bernad@example.com' AND password = 'dwiki123';
 
 -- change user profile
 UPDATE users
-SET name = 'Bernadus Dwiki', picture = 'newpicture.jpg', phone_number = '081234567899'
+SET name = 'Bernadus Dwiki', picture = 'newpicture.jpg', phone_number = '081234567899', updated_at = NOW()
 WHERE email = 'bernad@example.com' AND password = 'dwiki123';
+
+DROP TABLE users;
+DROP TABLE ewallets;
+DROP TABLE payment_methods;
+DROP TABLE transactions;
