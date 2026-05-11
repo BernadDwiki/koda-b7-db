@@ -128,10 +128,10 @@ WHERE user_id = (SELECT id FROM users WHERE email = 'bernad@example.com' AND pas
 --table users;
 
 -- find receiver with pagination
-SELECT id, name, email, picture, phone_number
+SELECT name, picture, phone_number
 FROM users
-WHERE id == (SELECT id FROM users WHERE email = 'yuki@example.com')
--- WHERE name ILIKE '%a%'
+WHERE id != (SELECT id FROM users WHERE email = 'bernad@example.com')
+AND name ILIKE '%a%'
 ORDER BY name
 LIMIT 10 OFFSET 0;
 
