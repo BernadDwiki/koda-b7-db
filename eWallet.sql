@@ -3,7 +3,7 @@ CREATE TABLE users (
     name VARCHAR(255),
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
-    pin CHAR(6) NOT,
+    pin CHAR(6),
     picture VARCHAR(255),
     phone_number VARCHAR(20) UNIQUE,
     created_at TIMESTAMP DEFAULT NOW() NOT NULL,
@@ -55,14 +55,18 @@ CREATE TABLE transactions (
 );
 
 --Login
-SELECT id, name, email, picture, phone_number
+SELECT id, name, email, picture, phone_number, pin
 FROM users
 WHERE email = 'bernad@example.com' AND password = 'dwiki123';
 
+UPDATE users
+SET pin = '123456', updated_at = NOW()
+WHERE email = 'bernad@example.com';
+
 -- Register
-INSERT INTO users (email, password, pin, picture)
-VALUES ('bernad@example.com', 'dwiki123', '567809', NULL),
-       ('yuki@example.com', 'yukipassword', '123456', NULL);
+INSERT INTO users (email, password)
+VALUES ('bernad@example.com', 'dwiki123'),
+       ('yuki@example.com', 'yukipassword');
 
 INSERT INTO ewallets (user_id, balance, income, expense)
 VALUES ((SELECT id FROM users WHERE email = 'bernad@example.com' AND password = 'dwiki123'), 0, 0, 0),
